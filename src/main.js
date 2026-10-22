@@ -94,11 +94,24 @@ function checkLauncherUpdate() {
   if (!app.isPackaged) return;
   try {
     const { autoUpdater } = require('electron-updater');
-    autoUpdater.on('update-available', () => status('Atualizando o launcher...', 0));
-    autoUpdater.on('update-downloaded', () => autoUpdater.quitAndInstall(true, true));
-    autoUpdater.on('error', () => {});
-    autoUpdater.checkForUpdates().catch(() => {});
-  } catch {}
+    autoUpdater.autoDownload = true;
+    autoUpdater.on('update-available', (info) => {
+      console.log('[Updater] Update available:', info && info.version);
+      status(`Atualizando o launcher (v${(info && info.version) || ''})...`, 0);
+    });
+    autoUpdater.on('update-downloaded', (info) => {
+      console.log('[Updater] Update downloaded:', info && info.version);
+      autoUpdater.quitAndInstall(true, true);
+    });
+    autoUpdater.on('error', (err) => {
+      console.warn('[Updater] Auto-updater error:', err ? err.message : err);
+    });
+    autoUpdater.checkForUpdates().catch((err) => {
+      console.warn('[Updater] checkForUpdates error:', err ? err.message : err);
+    });
+  } catch (e) {
+    console.warn('[Updater] Init error:', e);
+  }
 }
 
 ipcMain.on('win', (_, a) => {
@@ -273,12 +286,48 @@ function seedMinecraft() {
   }
 }
 
+function isZipValid(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return false;
+    const stat = fs.statSync(filePath);
+    if (stat.size < 22) return false;
+    const readSize = Math.min(stat.size, 1024);
+    const fd = fs.openSync(filePath, 'r');
+    const buf = Buffer.alloc(readSize);
+    fs.readSync(fd, buf, 0, readSize, stat.size - readSize);
+    fs.closeSync(fd);
+    for (let i = 0; i <= buf.length - 4; i++) {
+      if (buf[i] === 0x50 && buf[i + 1] === 0x4b && buf[i + 2] === 0x05 && buf[i + 3] === 0x06) {
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 // ---------- Forge Installer ----------
 async function ensureForge(mcVer, forgeVer, javawPath) {
   const versionId = `${mcVer}-forge-${forgeVer}`;
   const versionJson = path.join(gameDir, 'versions', versionId, `${versionId}.json`);
-  const slimJar = path.join(gameDir, 'libraries', 'net', 'minecraft', 'client', `${mcVer}-20230612.114412`, `client-${mcVer}-20230612.114412-slim.jar`);
-  if (fs.existsSync(versionJson) && fs.existsSync(slimJar)) return versionId;
+  const clientLibDir = path.join(gameDir, 'libraries', 'net', 'minecraft', 'client', `${mcVer}-20230612.114412`);
+  const slimJar = path.join(clientLibDir, `client-${mcVer}-20230612.114412-slim.jar`);
+  const extraJar = path.join(clientLibDir, `client-${mcVer}-20230612.114412-extra.jar`);
+
+  // Se a instalação e os JARs essenciais estão íntegros, não precisa reinstalar
+  if (fs.existsSync(versionJson) && isZipValid(slimJar) && isZipValid(extraJar)) return versionId;
+
+  // Se algum JAR estiver quebrado ou incompleto, limpa para reinstalar do zero
+  if (fs.existsSync(slimJar) && !isZipValid(slimJar)) {
+    try { fs.rmSync(slimJar, { force: true }); } catch {}
+  }
+  if (fs.existsSync(extraJar) && !isZipValid(extraJar)) {
+    try { fs.rmSync(extraJar, { force: true }); } catch {}
+  }
+  if (fs.existsSync(versionJson) && (!isZipValid(slimJar) || !isZipValid(extraJar))) {
+    try { fs.rmSync(versionJson, { force: true }); } catch {}
+  }
 
   status(`Baixando instalador do Forge ${forgeVer}...`, 0);
   const installerJar = path.join(userData, `forge-${mcVer}-${forgeVer}-installer.jar`);
@@ -297,14 +346,15 @@ async function ensureForge(mcVer, forgeVer, javawPath) {
   const r = spawnSync(bin, ['-jar', installerJar, '--installClient', gameDir], {
     encoding: 'utf8',
     windowsHide: true,
-    timeout: 300000
+    maxBuffer: 50 * 1024 * 1024,
+    timeout: 600000
   });
 
   try { fs.rmSync(installerJar, { force: true }); } catch {}
 
-  if (!fs.existsSync(versionJson)) {
+  if (!fs.existsSync(versionJson) || !isZipValid(slimJar)) {
     const out = (r.stderr || '') + (r.stdout || '');
-    throw new Error('Falha ao instalar o Forge: ' + out.slice(-300));
+    throw new Error('Falha ao instalar o Forge: ' + (out.slice(-400) || 'Arquivos de versão ou bibliotecas corrompidos'));
   }
 
   status(`Forge ${forgeVer} instalado com sucesso!`, 100);
@@ -691,7 +741,26 @@ ipcMain.handle('ping', () => new Promise((resolve) => {
 }));
 
 ipcMain.handle('releases', async () => {
-  return { list: [] };
+  try {
+    const owner = (config.github && config.github.owner) || 'ryan1235';
+    const repo = (config.github && config.github.repo) || 'imcompletos-launcher';
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases`, {
+      headers: { 'User-Agent': 'Incompletos-Launcher' }
+    });
+    if (!res.ok) return { list: [] };
+    const data = await res.json();
+    if (!Array.isArray(data)) return { list: [] };
+    const list = data.map((rel) => ({
+      tag: rel.tag_name || '',
+      name: rel.name || rel.tag_name || '',
+      body: rel.body || '',
+      date: rel.published_at || rel.created_at || '',
+      pre: !!rel.prerelease
+    }));
+    return { list };
+  } catch {
+    return { list: [] };
+  }
 });
 
 // primeiro download: Java + modpack + Forge

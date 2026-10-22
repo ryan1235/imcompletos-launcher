@@ -5,6 +5,10 @@
   "forgeVersion": "47.4.10",
   "curseShareCode": "XM07_s-3",
   "curseShareUrl": "https://www.curseforge.com/minecraft/share/XM07_s-3",
+  "github": {
+    "owner": "ryan1235",
+    "repo": "imcompletos-launcher"
+  },
   "javaDownloadUrl": "https://api.adoptium.net/v3/binary/latest/{v}/ga/windows/x64/jre/hotspot/normal/eclipse",
   "server": {
     "host": "ultra-08.bedhosting.com.br",
