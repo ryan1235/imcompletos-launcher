@@ -67,7 +67,32 @@ async function refreshServer() {
 }
 
 document.querySelectorAll('.wc button').forEach((b) => (b.onclick = () => api.win(b.dataset.w)));
-$('ddBtn').onclick = (e) => { e.stopPropagation(); $('menu').classList.toggle('hidden'); };
+function updateMenuPosition() {
+  const m = $('menu');
+  if (!m) return;
+  const dd = $('ddBtn').parentElement;
+  const card = dd.closest('.card') || document.querySelector('main');
+  const ddRect = dd.getBoundingClientRect();
+  const cardRect = card.getBoundingClientRect();
+  const menuWidth = 230;
+
+  const spaceOnLeft = ddRect.right - cardRect.left;
+  if (spaceOnLeft < menuWidth + 10) {
+    m.classList.add('align-left');
+    m.classList.remove('align-right');
+  } else {
+    m.classList.add('align-right');
+    m.classList.remove('align-left');
+  }
+}
+
+$('ddBtn').onclick = (e) => {
+  e.stopPropagation();
+  updateMenuPosition();
+  $('menu').classList.toggle('hidden');
+  updateMenuPosition();
+};
+window.addEventListener('resize', updateMenuPosition);
 document.addEventListener('click', () => $('menu').classList.add('hidden'));
 
 async function msLoginFlow() {
@@ -194,7 +219,7 @@ $('pageHome').classList.add('enter');
 
 // ripple nos botões
 document.addEventListener('click', (e) => {
-  const b = e.target.closest('.btn-play,.btn2,.btn-dd');
+  const b = e.target.closest('.btn-play,.btn2,.btn-dd,.btn-curse');
   if (!b || b.disabled) return;
   const r = b.getBoundingClientRect(), d = document.createElement('span');
   d.className = 'rip'; d.style.left = e.clientX - r.left + 'px'; d.style.top = e.clientY - r.top + 'px';

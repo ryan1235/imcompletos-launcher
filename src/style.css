@@ -23,24 +23,29 @@ main{padding:0 14px 14px;display:flex;flex-direction:column;gap:12px;overflow:hi
 .hero{flex:1 1 270px;min-height:120px;max-height:270px;margin:0 -14px;background:url(../assets/banner.png) center/cover,#080604;border-bottom:1px solid var(--line)}
 .card{flex-shrink:0;background:var(--card);border:1px solid var(--line);border-radius:8px}
 
-.play{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:16px;padding:14px 16px}
-.grass{width:50px;height:50px;border-radius:10px;object-fit:cover;border:1px solid rgba(228,170,66,0.35);box-shadow:0 0 12px rgba(228,170,66,0.18)}
-.pack h2{font-size:19px;font-weight:700;color:#fdf6e3}.pack span{font-size:12px;color:var(--gold);font-weight:500}
-.pack{margin-right:auto}
-.nick{display:flex;flex-direction:column;gap:5px}
-.nick label{font-size:12px;color:var(--mut)}
-.nick input{width:140px;height:34px;background:#1c1710;border:1px solid #332a1c;border-radius:6px;color:#fff;padding:0 10px;font-size:13px;outline:0;user-select:text}
+.play{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 16px}
+.grass{width:46px;height:46px;border-radius:10px;object-fit:cover;border:1px solid rgba(228,170,66,0.35);box-shadow:0 0 12px rgba(228,170,66,0.18)}
+.pack h2{font-size:18px;font-weight:700;color:#fdf6e3;line-height:1.2}.pack span{font-size:11px;color:var(--gold);font-weight:500}
+.pack{margin-right:auto;min-width:100px}
+.nick{display:flex;flex-direction:column;gap:4px}
+.nick label{font-size:11px;color:var(--mut)}
+.nick input{width:130px;height:36px;background:#1c1710;border:1px solid #332a1c;border-radius:6px;color:#fff;padding:0 10px;font-size:13px;outline:0;user-select:text}
 .nick input:focus{border-color:var(--gold);box-shadow:0 0 8px rgba(228,170,66,0.3)}
 .nick input:disabled{color:#8e8472}
-.btn-play{margin-top:19px;height:40px;width:132px;border:0;border-radius:6px;background:linear-gradient(135deg,#f6d67a 0%,#e4aa42 50%,#b7791f 100%);color:#160e05;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;box-shadow:0 4px 16px rgba(228,170,66,0.35);text-shadow:0 1px 0 rgba(255,255,255,0.25)}
-.btn-play svg{fill:#160e05}
+.btn-play{margin-top:16px;height:38px;width:120px;border:0;border-radius:6px;background:linear-gradient(135deg,#f6d67a 0%,#e4aa42 50%,#b7791f 100%);color:#160e05;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;box-shadow:0 4px 16px rgba(228,170,66,0.35);text-shadow:0 1px 0 rgba(255,255,255,0.25)}
+.btn-play svg{fill:#160e05;width:18px;height:18px}
 .btn-play:hover{filter:brightness(1.1);box-shadow:0 6px 20px rgba(246,214,122,0.55)}
 .btn-play:disabled{filter:grayscale(.7) brightness(.7);cursor:default}
-.dd{position:relative;margin-top:19px}
-.btn-dd{width:40px;height:40px;border:1px solid #332a1c;background:#1c1710;color:var(--gold-hi);border-radius:6px;cursor:pointer}
+.dd{position:relative;margin-top:16px}
+.btn-dd{width:38px;height:38px;border:1px solid #332a1c;background:#1c1710;color:var(--gold-hi);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .btn-dd:hover{background:#261f14;border-color:var(--gold)}
-.menu{position:absolute;right:0;top:46px;z-index:10;width:230px;background:#14110c;border:1px solid #332a1c;border-radius:6px;overflow:hidden;box-shadow:0 8px 24px #000c}
-.menu div{padding:11px 14px;font-size:13px;cursor:pointer}.menu div:hover{background:#221c13}
+.btn-curse{margin-top:16px;height:38px;display:flex;align-items:center;gap:6px;font-weight:600;font-size:12px;padding:0 11px;border:1px solid #332a1c;background:#18130c;color:var(--gold-hi);border-radius:6px;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.btn-curse:hover{background:#261f14;border-color:var(--gold);color:#fff}
+.btn-curse svg{width:15px;height:15px;color:var(--gold);flex:none}
+.menu{position:absolute;right:0;top:44px;z-index:25;width:230px;background:#14110c;border:1px solid #332a1c;border-radius:6px;overflow:hidden;box-shadow:0 8px 24px #000c}
+.menu.align-left{right:auto!important;left:0!important}
+.menu.align-right{right:0!important;left:auto!important}
+.menu div{padding:10px 14px;font-size:13px;cursor:pointer}.menu div:hover{background:#221c13}
 .menu div.sel{color:var(--gold-hi);font-weight:600}
 .bar{height:4px;background:#262015;border-radius:2px;overflow:hidden}.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#b7791f,#e4aa42,#f6d67a);transition:width .2s}
 
