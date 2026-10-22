@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('api', {
   diag: inv('diag'), releases: inv('releases'), sys: inv('sys'), javaList: inv('java-list'), pickJava: inv('pick-java'),
   openFolder: inv('open-folder'), repair: inv('repair'),
   verifyLauncher: inv('verify-launcher'), verifyPack: inv('verify-pack'),
+  setCurseCode: inv('set-curse-code'),
   win: (a) => ipcRenderer.send('win', a),
   link: (u) => ipcRenderer.send('open-link', u),
   on: (ch, fn) => ipcRenderer.on(ch, (_, d) => fn(d))

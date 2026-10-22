@@ -89,11 +89,78 @@ document.querySelectorAll('.menu [data-mode]').forEach((el) => {
 });
 $('nick').oninput = () => { $('nick').dataset.saved = $('nick').value; refreshPlay(); };
 $('nick').onkeydown = (e) => { if (e.key === 'Enter' && !$('play').disabled) $('play').click(); };
+function promptCurseModal(defaultCode, onResolved) {
+  const modal = $('curseModal');
+  const inp = $('curseModalInp');
+  const msg = $('curseModalMsg');
+  const submitBtn = $('curseModalSubmit');
+  const cancelBtn = $('curseModalCancel');
+
+  const cur = defaultCode || S.curseShareCode || '';
+  inp.value = cur.startsWith('http') ? cur : (cur ? `https://www.curseforge.com/minecraft/share/${cur}` : '');
+  msg.className = 'warnline hidden';
+  msg.textContent = '';
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Salvar e Continuar';
+  modal.classList.remove('hidden');
+  inp.focus();
+  inp.select();
+
+  cancelBtn.onclick = () => {
+    modal.classList.add('hidden');
+  };
+
+  const doSubmit = async () => {
+    const v = inp.value.trim();
+    if (!v) {
+      msg.textContent = 'Digite o link ou código do CurseForge.';
+      msg.className = 'warnline bad';
+      msg.classList.remove('hidden');
+      return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Verificando...';
+    msg.textContent = 'Validando link no CurseForge...';
+    msg.className = 'warnline';
+    msg.style.color = '#e8b020';
+    msg.classList.remove('hidden');
+
+    const res = await api.setCurseCode(v);
+    if (!res.ok) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Salvar e Continuar';
+      msg.textContent = '⚠ ' + res.error;
+      msg.className = 'warnline bad';
+      msg.classList.remove('hidden');
+    } else {
+      S.curseShareCode = res.code;
+      S.curseShareUrl = res.url;
+      if ($('curseCodeInp')) $('curseCodeInp').value = res.url;
+      modal.classList.add('hidden');
+      toast(`Modpack atualizado! (${res.code})`);
+      if (typeof onResolved === 'function') onResolved(res);
+    }
+  };
+
+  submitBtn.onclick = doSubmit;
+  inp.onkeydown = (e) => {
+    if (e.key === 'Enter') doSubmit();
+    else if (e.key === 'Escape') modal.classList.add('hidden');
+  };
+}
+
 $('play').onclick = async () => {
   if (busy || !nickOk()) { $('nick').focus(); return; }
   setBusy(true);
   const r = await api.play({ mode, nick: $('nick').value.trim() });
-  if (!r.ok) { setBusy(false); toast(r.error, true); }
+  if (!r.ok) {
+    setBusy(false);
+    if (r.error === 'CURSE_EXPIRED') {
+      promptCurseModal(r.curseCode, () => $('play').click());
+      return;
+    }
+    toast(r.error, true);
+  }
 };
 api.on('status', setStatus);
 api.on('started', () => { $('playTxt').textContent = 'Jogando'; $('progress').classList.add('hidden'); });
@@ -313,14 +380,54 @@ function bindSettings() {
     await api.repair();
     const r = await api.prepare();
     onStatus = null; $('progress').classList.add('hidden');
+    if (!r.ok && r.error === 'CURSE_EXPIRED') {
+      $('vPack').disabled = $('repair').disabled = false;
+      promptCurseModal(r.curseCode, () => $('repair').click());
+      return;
+    }
     $('intPack').textContent = r.ok ? '✓ Modpack reparado e atualizado' : '⚠ ' + r.error;
     $('intPack').className = r.ok ? '' : 'warnline bad';
     $('vPack').disabled = $('repair').disabled = false;
   };
+
+  const curseCodeInp = $('curseCodeInp');
+  const curseSaveBtn = $('curseSaveBtn');
+  const curseStatusText = $('curseStatusText');
+  if (curseCodeInp && curseSaveBtn) {
+    curseCodeInp.value = S.curseShareUrl || (S.curseShareCode ? `https://www.curseforge.com/minecraft/share/${S.curseShareCode}` : '');
+    curseSaveBtn.onclick = async () => {
+      const val = curseCodeInp.value.trim();
+      if (!val) {
+        toast('Insira o código ou link do CurseForge', true);
+        return;
+      }
+      curseSaveBtn.disabled = true;
+      curseSaveBtn.textContent = 'Verificando...';
+      curseStatusText.classList.add('hidden');
+      const res = await api.setCurseCode(val);
+      curseSaveBtn.disabled = false;
+      curseSaveBtn.textContent = 'Salvar e Atualizar';
+      if (!res.ok) {
+        curseStatusText.textContent = '⚠ ' + res.error;
+        curseStatusText.className = 'warnline bad';
+        curseStatusText.classList.remove('hidden');
+        toast(res.error, true);
+      } else {
+        S.curseShareCode = res.code;
+        S.curseShareUrl = res.url;
+        curseCodeInp.value = res.url;
+        curseStatusText.textContent = `✓ Modpack verificado e salvo! (${res.code})`;
+        curseStatusText.className = 'warnline';
+        curseStatusText.style.color = '#3c3';
+        curseStatusText.classList.remove('hidden');
+        toast('Modpack atualizado com sucesso!');
+      }
+    };
+  }
 }
 
 // ================= assistente de primeiro uso =================
-const WSTEPS = ['welcome', 'pc', 'mem', 'account', 'download', 'done'];
+const WSTEPS = ['welcome', 'pc', 'curse', 'mem', 'account', 'download', 'done'];
 let W = { i: 0 };
 
 function wizOpen() {
@@ -357,6 +464,53 @@ async function wizRender() {
     const rows = await renderDiag($('wdiag'));
     const fatal = rows.find((r) => r.fatal);
     if (fatal) { $('wnext').disabled = true; wmsg(`${fatal.label}: ${fatal.hint}`, true); }
+  }
+
+  if (id === 'curse') {
+    body.innerHTML = `<h2>Modpack CurseForge</h2><p class="lead">O launcher sincroniza os mods, shaders e texturas diretamente pelo link do CurseForge. Já deixamos tudo configurado para você!</p>
+      <div class="card set" style="padding:16px 20px">
+        <div class="field" style="margin:0 0 8px 0">
+          <label>Link ou Código de compartilhamento: <span style="display:block;margin-top:2px;color:#888">Altere apenas se você tiver um link atualizado do modpack.</span></label>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+            <input class="inp" id="wCUrl" placeholder="https://www.curseforge.com/minecraft/share/..." spellcheck="false" style="flex:1">
+            <button class="btn2 sm" id="wCTestBtn">Testar link</button>
+          </div>
+          <small id="wCMsg" class="warnline hidden" style="margin-top:8px;display:block"></small>
+        </div>
+      </div>
+      <p class="lead" style="font-size:12px;margin-top:12px;color:#888">💡 Se no futuro este modpack atualizar ou o link expirar, o launcher exibirá uma tela para atualizar o link automaticamente.</p>`;
+
+    const inp = $('wCUrl');
+    const msg = $('wCMsg');
+    const testBtn = $('wCTestBtn');
+    inp.value = S.curseShareUrl || (S.curseShareCode ? `https://www.curseforge.com/minecraft/share/${S.curseShareCode}` : 'https://www.curseforge.com/minecraft/share/XM07_s-3');
+
+    testBtn.onclick = async () => {
+      const v = inp.value.trim();
+      if (!v) { msg.textContent = '⚠ Digite um link ou código válido'; msg.className = 'warnline bad'; msg.classList.remove('hidden'); return; }
+      testBtn.disabled = true;
+      testBtn.textContent = 'Testando...';
+      msg.textContent = 'Conectando ao CurseForge...';
+      msg.className = 'warnline';
+      msg.style.color = '#e8b020';
+      msg.classList.remove('hidden');
+      const res = await api.setCurseCode(v);
+      testBtn.disabled = false;
+      testBtn.textContent = 'Testar link';
+      if (res.ok) {
+        msg.textContent = `✓ Link válido e verificado! (${res.code})`;
+        msg.className = 'warnline';
+        msg.style.color = '#3c3';
+        msg.classList.remove('hidden');
+        S.curseShareCode = res.code;
+        S.curseShareUrl = res.url;
+        inp.value = res.url;
+      } else {
+        msg.textContent = `⚠ ${res.error}`;
+        msg.className = 'warnline bad';
+        msg.classList.remove('hidden');
+      }
+    };
   }
 
   if (id === 'mem') {
@@ -408,6 +562,26 @@ async function wizRender() {
 
 async function wizGo(dir) {
   const id = WSTEPS[W.i];
+  if (dir > 0 && id === 'curse') {
+    const inp = $('wCUrl');
+    if (inp) {
+      const v = inp.value.trim();
+      const currentUrl = S.curseShareUrl || (S.curseShareCode ? `https://www.curseforge.com/minecraft/share/${S.curseShareCode}` : '');
+      if (v && v !== currentUrl && !v.endsWith(S.curseShareCode || '')) {
+        $('wnext').disabled = true;
+        wmsg('Verificando link no CurseForge...');
+        const res = await api.setCurseCode(v);
+        $('wnext').disabled = false;
+        if (!res.ok) {
+          wmsg(res.error, true);
+          return;
+        }
+        S.curseShareCode = res.code;
+        S.curseShareUrl = res.url;
+        wmsg('');
+      }
+    }
+  }
   if (dir > 0 && id === 'account') {
     mode = W.mode;
     if (mode === 'offline') { const n = $('wNick').value.trim(); S.nick = n; $('nick').dataset.saved = n; await api.save({ nick: n, mode }); }
@@ -446,7 +620,12 @@ async function wizDownload() {
     W.dl = 'ok'; draw(3, 'ok'); $('wdlBar').style.width = '100%'; $('wdlTxt').textContent = 'Tudo pronto!'; $('wdlPct').textContent = '100%';
     $('wnext').disabled = false; $('wback').disabled = false; wmsg('');
   } else {
-    W.dl = 'err'; draw(cur, 'err'); wmsg(r.error, true);
+    W.dl = 'err'; draw(cur, 'err');
+    if (r.error === 'CURSE_EXPIRED') {
+      promptCurseModal(r.curseCode, () => wizDownload());
+      return;
+    }
+    wmsg(r.error, true);
     $('wback').disabled = false; $('wnext').disabled = false; $('wnext').textContent = 'Tentar de novo';
     $('wnext').onclick = wizDownload;
   }
@@ -468,6 +647,8 @@ async function wizFinish() {
   SYS = await api.sys();
   S.cfgName = config.name;
   S.cfgNews = config.news;
+  S.curseShareCode = S.curseShareCode || config.curseShareCode;
+  S.curseShareUrl = config.curseShareUrl || (S.curseShareCode ? `https://www.curseforge.com/minecraft/share/${S.curseShareCode}` : '');
   $('packName').textContent = config.name;
   $('packSub').textContent = `${config.modpackName} ${config.mcVersion}`;
   $('vMc').textContent = config.mcVersion;

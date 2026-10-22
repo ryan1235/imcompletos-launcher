@@ -85,6 +85,17 @@
       <div class="row"><div><b>Modpack</b><small id="intPack">Confere mods, Forge e libs contra o manifesto oficial</small></div><span class="btns"><button class="btn2" id="vPack">Verificar</button><button class="btn2" id="repair">Reparar</button></span></div>
     </section>
 
+    <h2 class="sub">CurseForge Modpack</h2>
+    <section class="card set">
+      <div class="row col">
+        <div class="ramtop"><div><b>Código ou Link do Modpack</b><small>Atualize caso o código do CurseForge mude ou expire</small></div><button class="btn2 sm" id="curseSaveBtn">Salvar e Atualizar</button></div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+          <input class="inp" id="curseCodeInp" placeholder="https://www.curseforge.com/minecraft/share/..." spellcheck="false" style="flex:1">
+        </div>
+        <small id="curseStatusText" class="warnline hidden" style="margin-top:6px"></small>
+      </div>
+    </section>
+
     <h2 class="sub">Memória RAM</h2>
     <section class="card set">
       <div class="row col"><div class="ramtop"><div><b id="ramVal">4 GB</b> <span id="ramBadge" class="badge">Bom</span></div><button class="btn2 sm" id="ramAuto">Usar recomendado</button></div>
@@ -131,6 +142,27 @@
     <div class="steps" id="wsteps"></div>
     <div id="wbody" class="wbody"></div>
     <div class="wfoot"><button class="btn2" id="wback">Voltar</button><span id="wmsg" class="wmsg"></span><button class="btn-play wnext" id="wnext">Continuar</button></div>
+  </div>
+</div>
+<div id="curseModal" class="wiz hidden" style="z-index:100">
+  <div class="wbox" style="width:520px;max-width:92%">
+    <div class="wbody" style="min-height:auto;padding:24px 28px">
+      <h2 style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="font-size:22px;color:var(--red)">⚡</span> Atualizar Link do Modpack
+      </h2>
+      <p class="lead" id="curseModalLead" style="margin-bottom:16px">
+        O link de compartilhamento do CurseForge expirou ou mudou. Cole o novo link ou código abaixo para atualizar os arquivos do jogo:
+      </p>
+      <div class="field" style="margin:10px 0">
+        <label for="curseModalInp">Novo Link ou Código do CurseForge: <span style="display:block;margin-top:2px;color:#888">Ex: https://www.curseforge.com/minecraft/share/XM07_s-3</span></label>
+        <input class="inp" id="curseModalInp" placeholder="https://www.curseforge.com/minecraft/share/..." spellcheck="false" style="width:100%;box-sizing:border-box;margin-top:6px">
+      </div>
+      <small id="curseModalMsg" class="warnline hidden" style="margin-top:8px;display:block"></small>
+    </div>
+    <div class="wfoot">
+      <button class="btn2" id="curseModalCancel">Cancelar</button>
+      <button class="btn-play wnext" id="curseModalSubmit" style="width:auto;padding:0 22px">Salvar e Continuar</button>
+    </div>
   </div>
 </div>
 <script src="markdown.js"></script>

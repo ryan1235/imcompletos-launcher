@@ -315,6 +315,21 @@ async function ensureForge(mcVer, forgeVer, javawPath) {
 let manifest = null;
 let curseManifest = null;
 
+function extractCurseCode(str) {
+  if (!str) return null;
+  const trimmed = str.trim();
+  const mUrl = /share\/([A-Za-z0-9_-]+)/i.exec(trimmed);
+  if (mUrl) return mUrl[1];
+  const mCodeParam = /[?&]code=([A-Za-z0-9_-]+)/i.exec(trimmed);
+  if (mCodeParam) return mCodeParam[1];
+  if (/^[A-Za-z0-9_-]{4,30}$/.test(trimmed)) return trimmed;
+  return null;
+}
+function getCurseShareCode() {
+  const s = loadSettings();
+  return s.curseShareCode || config.curseShareCode || 'XM07_s-3';
+}
+
 function getForgeCdnUrl(fileId, fileName) {
   const s = String(fileId);
   return `https://edge.forgecdn.net/files/${s.slice(0, 4)}/${s.slice(4)}/${encodeURIComponent(fileName)}`;
@@ -330,7 +345,19 @@ async function syncCurseModpack(shareCode) {
     fs.rmSync(tempDir, { recursive: true, force: true });
     fs.mkdirSync(tempDir, { recursive: true });
     await extract(zipDest, { dir: tempDir });
+    const mfPath = path.join(tempDir, 'manifest.json');
+    if (!fs.existsSync(mfPath)) throw new Error('O pacote do CurseForge não contém manifest.json');
+    curseManifest = JSON.parse(fs.readFileSync(mfPath, 'utf8'));
+    manifest = curseManifest;
+    fs.writeFileSync(curseManifestCache, JSON.stringify(curseManifest, null, 2));
   } catch (err) {
+    const isExpired = /HTTP\s*(404|410|400|403)/i.test(err.message) || /não contém manifest/i.test(err.message) || /end of central directory/i.test(err.message);
+    if (isExpired) {
+      const e = new Error('CURSE_EXPIRED');
+      e.code = 'CURSE_EXPIRED';
+      e.shareCode = shareCode;
+      throw e;
+    }
     if (fs.existsSync(curseManifestCache)) {
       status('Não foi possível conectar ao CurseForge; usando cache local.', 0);
       curseManifest = JSON.parse(fs.readFileSync(curseManifestCache, 'utf8'));
@@ -341,12 +368,6 @@ async function syncCurseModpack(shareCode) {
   } finally {
     try { fs.rmSync(zipDest, { force: true }); } catch {}
   }
-
-  const mfPath = path.join(tempDir, 'manifest.json');
-  if (!fs.existsSync(mfPath)) throw new Error('O pacote do CurseForge não contém manifest.json');
-  curseManifest = JSON.parse(fs.readFileSync(mfPath, 'utf8'));
-  manifest = curseManifest;
-  fs.writeFileSync(curseManifestCache, JSON.stringify(curseManifest, null, 2));
 
   // 1. Copiar overrides (configs, shaders, etc.)
   const overrides = path.join(tempDir, curseManifest.overrides || 'overrides');
@@ -372,6 +393,21 @@ async function syncCurseModpack(shareCode) {
     if (m.classId === 6552) categoryMap.set(m.id, 'shaderpacks');
     else if (m.classId === 12) categoryMap.set(m.id, 'resourcepacks');
     else categoryMap.set(m.id, 'mods');
+  }
+
+  // Limpeza de mods obsoletos
+  const validModNames = new Set(
+    (filesRes.data || [])
+      .filter((f) => (categoryMap.get(f.modId) || (f.fileName.endsWith('.jar') ? 'mods' : 'other')) === 'mods')
+      .map((f) => f.fileName.toLowerCase())
+  );
+  const modsFolder = path.join(gameDir, 'mods');
+  if (fs.existsSync(modsFolder)) {
+    for (const f of fs.readdirSync(modsFolder)) {
+      if (f.endsWith('.jar') && !validModNames.has(f.toLowerCase())) {
+        try { fs.rmSync(path.join(modsFolder, f), { force: true }); } catch {}
+      }
+    }
   }
 
   // 3. Baixar arquivos que faltam ou estão corrompidos
@@ -439,8 +475,9 @@ async function verifyPack(report) {
 }
 
 async function syncModpack() {
-  if (config.curseShareCode) {
-    await syncCurseModpack(config.curseShareCode);
+  const code = getCurseShareCode();
+  if (code) {
+    await syncCurseModpack(code);
     return;
   }
   const online = await loadManifest();
@@ -579,7 +616,42 @@ async function microsoftSession() {
 }
 
 // ---------- IPC ----------
-ipcMain.handle('init', () => ({ config, settings: loadSettings(), version: app.getVersion() }));
+ipcMain.handle('init', () => {
+  const settings = loadSettings();
+  const curseCode = settings.curseShareCode || config.curseShareCode || 'XM07_s-3';
+  return {
+    config: {
+      ...config,
+      curseShareCode: curseCode,
+      curseShareUrl: `https://www.curseforge.com/minecraft/share/${curseCode}`
+    },
+    settings,
+    version: app.getVersion()
+  };
+});
+ipcMain.handle('set-curse-code', async (_, raw) => {
+  const code = extractCurseCode(raw);
+  if (!code) return { ok: false, error: 'Código ou link inválido do CurseForge.' };
+  try {
+    status('Verificando código no CurseForge...', 0);
+    const testZip = path.join(userData, 'curse-test.zip');
+    await download(`https://api.curseforge.com/v1/shared-profile/${code}`, testZip);
+    const testDir = path.join(userData, 'curse-test-extracted');
+    fs.rmSync(testDir, { recursive: true, force: true });
+    fs.mkdirSync(testDir, { recursive: true });
+    await extract(testZip, { dir: testDir });
+    const hasManifest = fs.existsSync(path.join(testDir, 'manifest.json'));
+    fs.rmSync(testDir, { recursive: true, force: true });
+    fs.rmSync(testZip, { force: true });
+    if (!hasManifest) return { ok: false, error: 'O pacote baixado não contém manifest.json de modpack.' };
+  } catch (err) {
+    return { ok: false, error: 'Código não encontrado ou já expirado no CurseForge.' };
+  }
+  config.curseShareCode = code;
+  config.curseShareUrl = `https://www.curseforge.com/minecraft/share/${code}`;
+  saveSettings({ ...loadSettings(), curseShareCode: code, packVersion: null });
+  return { ok: true, code, url: config.curseShareUrl };
+});
 ipcMain.handle('ms-login', async () => { try { return { ok: true, name: await microsoftLogin() }; } catch (e) { return { ok: false, error: e.message, cancelled: !!e.cancelled }; } });
 ipcMain.handle('ms-logout', () => { const s = loadSettings(); delete s.ms; saveSettings(s); msAuth = null; msAuthAt = 0; return true; });
 ipcMain.handle('save-settings', (_, patch) => { const s = { ...loadSettings(), ...patch }; for (const k of Object.keys(s)) if (s[k] === null) delete s[k]; saveSettings(s); return true; });
@@ -642,7 +714,10 @@ ipcMain.handle('prepare', async () => {
 
     status('Tudo pronto!', 100);
     return { ok: true };
-  } catch (e) { return { ok: false, error: String(e.message || e) }; }
+  } catch (e) {
+    const isCurseExpired = e.code === 'CURSE_EXPIRED' || e.message === 'CURSE_EXPIRED';
+    return { ok: false, error: isCurseExpired ? 'CURSE_EXPIRED' : String(e.message || e), curseCode: getCurseShareCode() };
+  }
   finally { launching = false; }
 });
 
@@ -741,6 +816,7 @@ ipcMain.handle('play', async (_, { mode, nick }) => {
     return { ok: true };
   } catch (e) {
     launching = false;
-    return { ok: false, error: String(e.message || e) };
+    const isCurseExpired = e.code === 'CURSE_EXPIRED' || e.message === 'CURSE_EXPIRED';
+    return { ok: false, error: isCurseExpired ? 'CURSE_EXPIRED' : String(e.message || e), curseCode: getCurseShareCode() };
   }
 });
