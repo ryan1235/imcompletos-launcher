@@ -1,71 +1,55 @@
 <div align="center">
 
-<img src="assets/icon.png" width="110" alt="DeathAwaits">
+<img src="assets/icon.png" width="110" alt="Incompletos Launcher">
 
-# DeathAwaits Launcher
+# Incompletos Launcher
 
-**Launcher autônomo do modpack DeathAwaits — Minecraft 1.6.4 + Forge**
-Aceita conta **pirata (offline)** e **original (Microsoft)**. Java e Minecraft embutidos: é só abrir e jogar.
+**Launcher autônomo do modpack ModPack de Cria — Incompletos Gaming (Minecraft 1.20.1 + Forge)**
+Aceita conta **pirata (offline)** e **original (Microsoft)**. Java e CurseForge integrados: é só abrir e jogar.
 
-[![Release](https://img.shields.io/github/v/release/ryan1235/DeathAwaits?style=for-the-badge&color=d4141c)](https://github.com/ryan1235/DeathAwaits/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/ryan1235/DeathAwaits/total?style=for-the-badge&color=333)](https://github.com/ryan1235/DeathAwaits/releases)
-[![Discord](https://img.shields.io/badge/Discord-entrar-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/gc73gQfb5F)
-
-<img src="docs/preview.png" width="760" alt="Preview do launcher">
+[![Release](https://img.shields.io/github/v/release/ryan1235/imcompletos-launcher?style=for-the-badge&color=e09612)](https://github.com/ryan1235/imcompletos-launcher/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/ryan1235/imcompletos-launcher/total?style=for-the-badge&color=222)](https://github.com/ryan1235/imcompletos-launcher/releases)
+[![Discord](https://img.shields.io/badge/Discord-entrar-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/PxfytFvuhx)
+[![Website](https://img.shields.io/badge/Website-incompletos.com.br-00bcd4?style=for-the-badge)](https://incompletos.com.br)
 
 </div>
 
 ## ⬇️ Baixar
 
-Vá em **[Releases](https://github.com/ryan1235/DeathAwaits/releases/latest)** e escolha:
+Vá em **[Releases](https://github.com/ryan1235/imcompletos-launcher/releases/latest)** e escolha:
 
 | Arquivo | Para quê |
 |---|---|
-| `DeathAwaits-Launcher-Setup-*.exe` | Instala com atalho na área de trabalho (recomendado) |
-| `DeathAwaits-Launcher-Portable-*.exe` | Roda direto, sem instalar |
+| `Incompletos-Launcher-Setup-*.exe` | Instala com atalho na área de trabalho e no menu iniciar (recomendado) |
+| `Incompletos-Launcher-Portable-*.exe` | Roda direto, sem precisar instalar |
 
-> O Windows pode mostrar o aviso do SmartScreen na primeira vez (o launcher não é assinado digitalmente). Clique em **Mais informações → Executar assim mesmo**.
+> O Windows pode mostrar o aviso do SmartScreen na primeira vez (o executável não é assinado por certificado comercial). Basta clicar em **Mais informações → Executar assim mesmo**.
 
 ## ✨ Recursos
 
-- 🎮 **Conta pirata e original** — nickname offline ou login Microsoft
-- ☕ **Java embutido** — escolhe o Java certo para a versão do Minecraft (8 / 17 / 21) e detecta os que você já tem
-- 📦 **Modpack automático** — baixa, instala e atualiza mods e Forge sozinho
-- 🛡️ **Integridade** — confere o launcher e todos os arquivos do modpack e repara o que estiver corrompido
-- 🧭 **Primeiro uso guiado** — checa o PC, sugere a memória ideal e faz o primeiro download
-- 📰 **Novidades** — versão e notas de atualização vêm das Releases do GitHub (Markdown, ícones e imagens)
-- 🔄 **Auto-update** do launcher
-- ⚙️ Memória RAM, tela cheia, tamanho da janela, argumentos da JVM, logs e muito mais
-- 🫥 O launcher some quando o jogo abre e volta quando você fecha o Minecraft
+- 🎮 **Conta pirata e original** — nickname offline ou login seguro via Microsoft / Xbox Live
+- ☕ **Java 17 Automático** — baixa o Eclipse Temurin JRE 17 headless se você não tiver instalado
+- 📦 **Sincronização CurseForge Dinâmica** — suporte a código de compartilhamento direto do CurseForge, com modal automático para trocar link caso expire
+- 🛡️ **Verificação de Integridade** — confere todos os JARs e modpacks para evitar arquivos truncados
+- 🧭 **Assistente Inicial de Configuração** — testa memória RAM recomendada, Java e baixa os componentes necessários
+- 📰 **Novidades do Incompletos Gaming** — notas de atualização do GitHub e servidor de Discord integrados
+- 🔄 **Auto-update** via GitHub Releases
+- ⚙️ Controle de memória RAM (2 GB a 16 GB), tela cheia, argumentos JVM e ferramentas de diagnóstico
+- 🫥 O launcher minimiza ou oculta automaticamente ao abrir o jogo e reaparece ao fechar
 
 ## 💻 Requisitos
 
 - Windows 10/11 64 bits
-- 4 GB de RAM (recomendado 8 GB ou mais) e ~2 GB livres em disco
+- Mínimo de 4 GB de RAM (recomendado 8 GB ou mais) e ~3 GB de espaço livre em disco
 
 ## 🛠️ Desenvolvimento
 
 ```bash
 npm install
-npm start                 # abre o launcher
-npm run build             # gera dist/ (instalador + portátil)
+npm start                 # abre o launcher em modo de desenvolvimento
+npm run build             # compila o instalador NSIS e a versão portátil em dist/
 ```
-
-Estrutura: `src/` (app Electron), `tools/` (scripts de build/pacote), `config.json` (nome, servidor, links).
-
-### Publicar uma versão
-
-1. Gere o pacote do modpack a partir da pasta com `mods/`, `config/` e `bin/` (Forge):
-   ```bash
-   npm run pack -- <pasta-do-modpack> v1.0.1
-   ```
-   Isso cria `release/DeathAwaits-modpack.zip` e `release/manifest.json`.
-2. Aumente `version` no `package.json` e rode `npm run build`.
-3. Crie uma **Release** com a tag `v1.0.1`, escreva as notas em Markdown e anexe:
-   `DeathAwaits-modpack.zip`, `manifest.json`, `latest.yml`, o `Setup`, o `Portable` e o `.blockmap`.
-
-O launcher lê `releases/latest/download/manifest.json`, então a release mais recente é sempre a versão oficial.
 
 ---
 
-<div align="center">Feito com 💀 para a comunidade DeathAwaits</div>
+<div align="center">Feito com ⚔️ para a comunidade <b>Incompletos Gaming</b></div>
