@@ -88,21 +88,31 @@ document.querySelectorAll('.menu [data-mode]').forEach((el) => {
     applyMode();
   };
 });
+if ($('btnCurseChange')) $('btnCurseChange').onclick = () => promptCurseModal();
+if ($('menuCurseLink')) $('menuCurseLink').onclick = () => { $('menu').classList.add('hidden'); promptCurseModal(); };
+
 $('nick').oninput = () => { $('nick').dataset.saved = $('nick').value; refreshPlay(); };
 $('nick').onkeydown = (e) => { if (e.key === 'Enter' && !$('play').disabled) $('play').click(); };
-function promptCurseModal(defaultCode, onResolved) {
+function promptCurseModal(defaultCode, onResolved, isExpired = false) {
   const modal = $('curseModal');
   const inp = $('curseModalInp');
   const msg = $('curseModalMsg');
   const submitBtn = $('curseModalSubmit');
   const cancelBtn = $('curseModalCancel');
+  const lead = $('curseModalLead');
+
+  if (lead) {
+    lead.textContent = isExpired
+      ? 'O link de compartilhamento do CurseForge expirou ou mudou. Cole o novo link ou código abaixo para atualizar os arquivos do jogo:'
+      : 'Cole o link de compartilhamento ou código do modpack CurseForge para atualizar a versão dos mods:';
+  }
 
   const cur = defaultCode || S.curseShareCode || '';
   inp.value = cur.startsWith('http') ? cur : (cur ? `https://www.curseforge.com/minecraft/share/${cur}` : '');
   msg.className = 'warnline hidden';
   msg.textContent = '';
   submitBtn.disabled = false;
-  submitBtn.textContent = 'Salvar e Continuar';
+  submitBtn.textContent = isExpired ? 'Salvar e Continuar' : 'Salvar e Atualizar';
   modal.classList.remove('hidden');
   inp.focus();
   inp.select();
@@ -157,7 +167,7 @@ $('play').onclick = async () => {
   if (!r.ok) {
     setBusy(false);
     if (r.error === 'CURSE_EXPIRED') {
-      promptCurseModal(r.curseCode, () => $('play').click());
+      promptCurseModal(r.curseCode, () => $('play').click(), true);
       return;
     }
     toast(r.error, true);
@@ -383,7 +393,7 @@ function bindSettings() {
     onStatus = null; $('progress').classList.add('hidden');
     if (!r.ok && r.error === 'CURSE_EXPIRED') {
       $('vPack').disabled = $('repair').disabled = false;
-      promptCurseModal(r.curseCode, () => $('repair').click());
+      promptCurseModal(r.curseCode, () => $('repair').click(), true);
       return;
     }
     $('intPack').textContent = r.ok ? '✓ Modpack reparado e atualizado' : '⚠ ' + r.error;
@@ -623,7 +633,7 @@ async function wizDownload() {
   } else {
     W.dl = 'err'; draw(cur, 'err');
     if (r.error === 'CURSE_EXPIRED') {
-      promptCurseModal(r.curseCode, () => wizDownload());
+      promptCurseModal(r.curseCode, () => wizDownload(), true);
       return;
     }
     wmsg(r.error, true);

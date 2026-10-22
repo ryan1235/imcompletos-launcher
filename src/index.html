@@ -39,13 +39,22 @@
       </div>
       <button id="play" class="btn-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span id="playTxt">Jogar</span></button>
       <div class="dd">
-        <button id="ddBtn" class="btn-dd"><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></button>
+        <button id="ddBtn" class="btn-dd" title="Opções de conta"><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></button>
         <div id="menu" class="menu hidden">
           <div data-mode="offline">Conta pirata (offline)</div>
           <div data-mode="microsoft">Conta original (Microsoft)</div>
           <div data-mode="logout" id="logoutItem" class="hidden">Sair da conta Microsoft</div>
+          <div style="border-top:1px solid #332a1c;margin:4px 0"></div>
+          <div id="menuCurseLink" style="display:flex;align-items:center;gap:8px;color:var(--gold-hi)">
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;color:var(--gold);flex:none"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+            <span>Trocar link do modpack</span>
+          </div>
         </div>
       </div>
+      <button id="btnCurseChange" class="btn2" title="Trocar o link ou código do modpack CurseForge" style="margin-top:19px;height:40px;display:flex;align-items:center;gap:6px;font-weight:600;font-size:12px;padding:0 12px;border-color:#332a1c;background:#18130c;color:var(--gold-hi)">
+        <svg viewBox="0 0 24 24" style="width:15px;height:15px;color:var(--gold);flex:none"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+        <span>Trocar Link</span>
+      </button>
       <div id="progress" class="progress hidden"><div class="ptop"><span id="progTxt"></span><b id="progPct"></b></div><div class="bar"><i id="progBar"></i></div></div>
     </section>
 
