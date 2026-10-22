@@ -10,6 +10,9 @@ const { spawnSync } = require('child_process');
 const extract = require('extract-zip');
 const { Client, Authenticator } = require('minecraft-launcher-core');
 
+process.on('uncaughtException', (err) => console.error('[UncaughtException]', err));
+process.on('unhandledRejection', (err) => console.error('[UnhandledRejection]', err));
+
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config.json'), 'utf8'));
 if (process.env.DA_MANIFEST_URL) config.manifestUrl = process.env.DA_MANIFEST_URL;
 
@@ -17,6 +20,7 @@ let win, tray;
 let launching = false;
 let playing = false;
 
+app.name = 'incompletos-launcher';
 app.setAppUserModelId('com.incompletos.launcher');
 const userData = app.getPath('userData');
 const gameDir = path.join(userData, 'game');
@@ -35,13 +39,20 @@ const status = (text, pct) => send('status', { text, pct });
 
 // ---------- janela / bandeja ----------
 function createWindow() {
+  console.log('[Main] Creating window...');
   win = new BrowserWindow({
     width: 990, height: 640, minWidth: 900, minHeight: 600,
     frame: false, backgroundColor: '#0d0d0f', icon: appIcon(),
+    show: true,
+    center: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
   });
   win.setMenu(null);
   win.loadFile(path.join(__dirname, 'index.html'));
+  win.webContents.on('did-finish-load', () => console.log('[Main] Window loaded index.html'));
+  win.webContents.on('did-fail-load', (e, code, desc) => console.error('[Main] Fail load:', code, desc));
+  win.show();
+  win.focus();
 }
 function showWindow() {
   if (!win || win.isDestroyed()) return;
@@ -57,10 +68,26 @@ function createTray() {
   tray.on('click', showWindow);
 }
 
-if (!app.requestSingleInstanceLock()) app.quit();
-app.on('second-instance', showWindow);
-app.whenReady().then(() => { createWindow(); createTray(); checkLauncherUpdate(); });
-app.on('window-all-closed', () => app.quit());
+const gotLock = app.requestSingleInstanceLock();
+console.log('[Main] gotLock:', gotLock);
+if (!gotLock) {
+  console.log('[Main] Quitting because single instance lock not obtained');
+  app.quit();
+}
+app.on('second-instance', () => {
+  console.log('[Main] Second instance detected, showing window');
+  showWindow();
+});
+app.whenReady().then(() => {
+  console.log('[Main] App ready');
+  createWindow();
+  createTray();
+  checkLauncherUpdate();
+});
+app.on('window-all-closed', () => {
+  console.log('[Main] Window all closed');
+  app.quit();
+});
 
 // ---------- atualização do launcher ----------
 function checkLauncherUpdate() {
@@ -250,7 +277,8 @@ function seedMinecraft() {
 async function ensureForge(mcVer, forgeVer, javawPath) {
   const versionId = `${mcVer}-forge-${forgeVer}`;
   const versionJson = path.join(gameDir, 'versions', versionId, `${versionId}.json`);
-  if (fs.existsSync(versionJson)) return versionId;
+  const slimJar = path.join(gameDir, 'libraries', 'net', 'minecraft', 'client', `${mcVer}-20230612.114412`, `client-${mcVer}-20230612.114412-slim.jar`);
+  if (fs.existsSync(versionJson) && fs.existsSync(slimJar)) return versionId;
 
   status(`Baixando instalador do Forge ${forgeVer}...`, 0);
   const installerJar = path.join(userData, `forge-${mcVer}-${forgeVer}-installer.jar`);
@@ -666,13 +694,38 @@ ipcMain.handle('play', async (_, { mode, nick }) => {
       showWindow();
     });
 
+    const forgeJvmArgs = [];
+    if (customVersion) {
+      const vJsonPath = path.join(gameDir, 'versions', customVersion, `${customVersion}.json`);
+      if (fs.existsSync(vJsonPath)) {
+        try {
+          const vJson = JSON.parse(fs.readFileSync(vJsonPath, 'utf8'));
+          const libDir = path.join(gameDir, 'libraries');
+          const cpSep = ';';
+          const jvmRaw = (vJson.arguments && vJson.arguments.jvm) || [];
+          for (const arg of jvmRaw) {
+            if (typeof arg === 'string') {
+              forgeJvmArgs.push(arg
+                .replace(/\$\{library_directory\}/g, libDir)
+                .replace(/\$\{classpath_separator\}/g, cpSep)
+                .replace(/\$\{version_name\}/g, customVersion)
+              );
+            }
+          }
+        } catch (e) {
+          console.error('Erro ao ler JVM args do Forge:', e);
+        }
+      }
+    }
+
     const opts = {
       authorization, root: gameDir, javaPath, version,
-      memory: { min: config.ram.min, max: ramMbFor() + 'M' }
+      memory: { min: config.ram.min, max: ramMbFor() + 'M' },
+      customArgs: forgeJvmArgs
     };
     if (st.fullscreen) opts.window = { fullscreen: true };
     else if (st.width && st.height) opts.window = { width: String(st.width), height: String(st.height) };
-    if (st.jvmArgs && st.jvmArgs.trim()) opts.customArgs = st.jvmArgs.trim().split(/\s+/);
+    if (st.jvmArgs && st.jvmArgs.trim()) opts.customArgs = opts.customArgs.concat(st.jvmArgs.trim().split(/\s+/));
 
     status('Iniciando o jogo...', 100);
     const proc = await launcher.launch(opts);
