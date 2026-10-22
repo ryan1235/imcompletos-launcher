@@ -1,0 +1,10 @@
+node_modules/
+dist/
+release/
+runtime/
+minecraft/*
+!minecraft/.gitkeep
+srvtest/
+shots/
+src/integrity.json
+*.log

@@ -1,0 +1,25 @@
+{
+  "name": "Incompletos",
+  "modpackName": "ModPack de Cria",
+  "mcVersion": "1.20.1",
+  "forgeVersion": "47.4.10",
+  "curseShareCode": "XM07_s-3",
+  "curseShareUrl": "https://www.curseforge.com/minecraft/share/XM07_s-3",
+  "javaDownloadUrl": "https://api.adoptium.net/v3/binary/latest/{v}/ga/windows/x64/jre/hotspot/normal/eclipse",
+  "server": {
+    "host": "ultra-08.bedhosting.com.br",
+    "port": 25493
+  },
+  "ram": {
+    "min": "2G",
+    "max": "4G"
+  },
+  "links": {
+    "CurseForge": "https://www.curseforge.com/minecraft/share/XM07_s-3"
+  },
+  "news": {
+    "welcome": "Seja bem-vindo ao Incompletos Launcher! O ModPack de Cria 1.4 está pronto para jogar.",
+    "title": "ModPack de Cria 1.4",
+    "text": "Modpack com 45 mods, shaders e texturas no Minecraft 1.20.1 Forge."
+  }
+}

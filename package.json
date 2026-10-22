@@ -1,0 +1,87 @@
+{
+  "name": "incompletos-launcher",
+  "productName": "Incompletos Launcher",
+  "version": "1.0.0",
+  "description": "Launcher autônomo do modpack ModPack de Cria (Incompletos)",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable nsis",
+    "icon": "electron tools/make-icon.js",
+    "manifest": "node tools/make-manifest.js",
+    "pack": "node tools/make-pack.js",
+    "integrity": "node tools/make-integrity.js",
+    "build": "node tools/fetch-java.js && node tools/make-integrity.js && electron-builder --win portable nsis --publish never"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9",
+    "extract-zip": "^2.0.1",
+    "minecraft-launcher-core": "^3.18.2",
+    "msmc": "^5.0.5"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "rcedit": "^4.0.1"
+  },
+  "build": {
+    "appId": "com.incompletos.launcher",
+    "productName": "Incompletos Launcher",
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "config.json"
+    ],
+    "extraResources": [
+      {
+        "from": "runtime",
+        "to": "runtime"
+      },
+      {
+        "from": "minecraft",
+        "to": "minecraft"
+      }
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Incompletos-Launcher-${version}.${ext}",
+      "signAndEditExecutable": false
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "compression": "maximum",
+    "asar": true,
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "shortcutName": "Incompletos Launcher",
+      "artifactName": "Incompletos-Launcher-Setup-${version}.${ext}",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico",
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "Incompletos-Launcher-Portable-${version}.${ext}"
+    },
+    "afterPack": "build/after-pack.js"
+  },
+  "author": "Incompletos",
+  "homepage": "https://www.curseforge.com/minecraft/share/XM07_s-3"
+}
