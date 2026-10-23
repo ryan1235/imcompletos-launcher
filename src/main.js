@@ -291,7 +291,7 @@ function isZipValid(filePath) {
     if (!fs.existsSync(filePath)) return false;
     const stat = fs.statSync(filePath);
     if (stat.size < 22) return false;
-    const readSize = Math.min(stat.size, 1024);
+    const readSize = Math.min(stat.size, 65558);
     const fd = fs.openSync(filePath, 'r');
     const buf = Buffer.alloc(readSize);
     fs.readSync(fd, buf, 0, readSize, stat.size - readSize);
@@ -314,20 +314,30 @@ async function ensureForge(mcVer, forgeVer, javawPath) {
   const clientLibDir = path.join(gameDir, 'libraries', 'net', 'minecraft', 'client', `${mcVer}-20230612.114412`);
   const slimJar = path.join(clientLibDir, `client-${mcVer}-20230612.114412-slim.jar`);
   const extraJar = path.join(clientLibDir, `client-${mcVer}-20230612.114412-extra.jar`);
+  const srgJar = path.join(clientLibDir, `client-${mcVer}-20230612.114412-srg.jar`);
 
-  // Se a instalação e os JARs essenciais estão íntegros, não precisa reinstalar
-  if (fs.existsSync(versionJson) && isZipValid(slimJar) && isZipValid(extraJar)) return versionId;
+  const forgeLibDir = path.join(gameDir, 'libraries', 'net', 'minecraftforge', 'forge', `${mcVer}-${forgeVer}`);
+  const forgeClientJar = path.join(forgeLibDir, `forge-${mcVer}-${forgeVer}-client.jar`);
+  const forgeUniversalJar = path.join(forgeLibDir, `forge-${mcVer}-${forgeVer}-universal.jar`);
+
+  const essentialJars = [slimJar, extraJar, srgJar, forgeClientJar, forgeUniversalJar];
+
+  // Se a instalação e todos os JARs essenciais estão íntegros, não precisa reinstalar
+  if (fs.existsSync(versionJson) && essentialJars.every((j) => isZipValid(j))) {
+    return versionId;
+  }
 
   // Se algum JAR estiver quebrado ou incompleto, limpa para reinstalar do zero
-  if (fs.existsSync(slimJar) && !isZipValid(slimJar)) {
-    try { fs.rmSync(slimJar, { force: true }); } catch {}
+  for (const j of essentialJars) {
+    if (fs.existsSync(j) && !isZipValid(j)) {
+      try { fs.rmSync(j, { force: true }); } catch {}
+    }
   }
-  if (fs.existsSync(extraJar) && !isZipValid(extraJar)) {
-    try { fs.rmSync(extraJar, { force: true }); } catch {}
-  }
-  if (fs.existsSync(versionJson) && (!isZipValid(slimJar) || !isZipValid(extraJar))) {
+  if (fs.existsSync(versionJson)) {
     try { fs.rmSync(versionJson, { force: true }); } catch {}
   }
+  try { fs.rmSync(path.join(clientLibDir, `client-${mcVer}-20230612.114412-extra.jar.cache`), { force: true }); } catch {}
+  try { fs.rmSync(path.join(clientLibDir, `client-${mcVer}-20230612.114412-slim.jar.cache`), { force: true }); } catch {}
 
   status(`Baixando instalador do Forge ${forgeVer}...`, 0);
   const installerJar = path.join(userData, `forge-${mcVer}-${forgeVer}-installer.jar`);
@@ -352,7 +362,9 @@ async function ensureForge(mcVer, forgeVer, javawPath) {
 
   try { fs.rmSync(installerJar, { force: true }); } catch {}
 
-  if (!fs.existsSync(versionJson) || !isZipValid(slimJar)) {
+  const postInstallValid = fs.existsSync(versionJson) && essentialJars.every((j) => isZipValid(j));
+  if (!postInstallValid) {
+    try { fs.rmSync(versionJson, { force: true }); } catch {}
     const out = (r.stderr || '') + (r.stdout || '');
     throw new Error('Falha ao instalar o Forge: ' + (out.slice(-400) || 'Arquivos de versão ou bibliotecas corrompidos'));
   }
@@ -471,11 +483,17 @@ async function syncCurseModpack(shareCode) {
     const sha1 = (f.hashes || []).find((h) => h.algo === 1)?.value;
     let upToDate = false;
     if (fs.existsSync(dest)) {
-      if (sha1) {
-        const hash = await hashFile(dest, 'sha1');
-        if (hash && hash.toLowerCase() === sha1.toLowerCase()) upToDate = true;
-      } else if (fs.statSync(dest).size === f.fileLength) {
-        upToDate = true;
+      const isZip = /\.(jar|zip)$/i.test(dest);
+      const validZip = isZip ? isZipValid(dest) : true;
+      if (validZip) {
+        if (sha1) {
+          const hash = await hashFile(dest, 'sha1');
+          if (hash && hash.toLowerCase() === sha1.toLowerCase()) upToDate = true;
+        } else if (fs.statSync(dest).size === f.fileLength) {
+          upToDate = true;
+        }
+      } else {
+        try { fs.rmSync(dest, { force: true }); } catch {}
       }
     }
 
@@ -714,7 +732,35 @@ ipcMain.handle('pick-java', async () => {
   const r = await dialog.showOpenDialog(win, { filters: [{ name: 'Java', extensions: ['exe'] }], properties: ['openFile'] });
   return r.canceled ? null : r.filePaths[0];
 });
-ipcMain.handle('repair', () => { fs.rmSync(path.join(gameDir, '.seeded'), { force: true }); saveSettings({ ...loadSettings(), packVersion: null }); return true; });
+ipcMain.handle('repair', () => {
+  try {
+    fs.rmSync(path.join(gameDir, '.seeded'), { force: true });
+    const mcVer = mcVersion();
+    const forgeVer = config.forgeVersion;
+    if (forgeVer) {
+      const versionId = `${mcVer}-forge-${forgeVer}`;
+      fs.rmSync(path.join(gameDir, 'versions', versionId), { recursive: true, force: true });
+      fs.rmSync(path.join(gameDir, 'libraries', 'net', 'minecraft', 'client'), { recursive: true, force: true });
+      fs.rmSync(path.join(gameDir, 'libraries', 'net', 'minecraftforge', 'forge', `${mcVer}-${forgeVer}`), { recursive: true, force: true });
+    }
+    const modsFolder = path.join(gameDir, 'mods');
+    if (fs.existsSync(modsFolder)) {
+      for (const f of fs.readdirSync(modsFolder)) {
+        if (f.endsWith('.jar')) {
+          const modPath = path.join(modsFolder, f);
+          if (!isZipValid(modPath)) {
+            try { fs.rmSync(modPath, { force: true }); } catch {}
+          }
+        }
+      }
+    }
+    saveSettings({ ...loadSettings(), packVersion: null });
+    return true;
+  } catch (e) {
+    console.error('Erro ao reparar:', e);
+    return false;
+  }
+});
 ipcMain.handle('verify-launcher', () => checkLauncherIntegrity());
 ipcMain.handle('verify-pack', async () => {
   try {

@@ -11,8 +11,8 @@
   },
   "javaDownloadUrl": "https://api.adoptium.net/v3/binary/latest/{v}/ga/windows/x64/jre/hotspot/normal/eclipse",
   "server": {
-    "host": "ultra-08.bedhosting.com.br",
-    "port": 25493
+    "host": "enx-cirion-56.enx.host",
+    "port": 10078
   },
   "ram": {
     "min": "2G",

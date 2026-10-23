@@ -14,6 +14,12 @@ Aceita conta **pirata (offline)** e **original (Microsoft)**. Java e CurseForge 
 
 </div>
 
+## 🌐 Servidor Oficial
+
+- **Endereço (IP):** `enx-cirion-56.enx.host:10078`
+- **Versão:** Minecraft 1.20.1 (Forge 47.4.10)
+- **Status:** Monitorado e exibido em tempo real no launcher
+
 ## ⬇️ Baixar
 
 Vá em **[Releases](https://github.com/ryan1235/imcompletos-launcher/releases/latest)** e escolha:
