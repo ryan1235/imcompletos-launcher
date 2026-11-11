@@ -4,7 +4,7 @@
 
 # Incompletos Launcher
 
-**Launcher autônomo do modpack ModPack de Cria — Incompletos Gaming (Minecraft 1.20.1 + Forge)**
+**Launcher autônomo do modpack ModPack de Cria — Incompletos Gaming (Minecraft 1.21.1 + NeoForge / Forge / Fabric)**
 Aceita conta **pirata (offline)** e **original (Microsoft)**. Java e CurseForge integrados: é só abrir e jogar.
 
 [![Release](https://img.shields.io/github/v/release/ryan1235/imcompletos-launcher?style=for-the-badge&color=e09612)](https://github.com/ryan1235/imcompletos-launcher/releases/latest)
@@ -17,7 +17,7 @@ Aceita conta **pirata (offline)** e **original (Microsoft)**. Java e CurseForge 
 ## 🌐 Servidor Oficial
 
 - **Endereço (IP):** `enx-cirion-56.enx.host:10078`
-- **Versão:** Minecraft 1.20.1 (Forge 47.4.10)
+- **Versão:** Minecraft 1.21.1 (NeoForge 21.1.265)
 - **Status:** Monitorado e exibido em tempo real no launcher
 
 ## ⬇️ Baixar
@@ -34,8 +34,8 @@ Vá em **[Releases](https://github.com/ryan1235/imcompletos-launcher/releases/la
 ## ✨ Recursos
 
 - 🎮 **Conta pirata e original** — nickname offline ou login seguro via Microsoft / Xbox Live
-- ☕ **Java 17 Automático** — baixa o Eclipse Temurin JRE 17 headless se você não tiver instalado
-- 📦 **Sincronização CurseForge Dinâmica** — suporte a código de compartilhamento direto do CurseForge, com modal automático para trocar link caso expire
+- ☕ **Java Automático (Java 21 / 17)** — baixa o Eclipse Temurin JRE headless conforme a versão do Minecraft
+- 📦 **Sincronização CurseForge Dinâmica** — suporte a modpacks com NeoForge, Forge, Fabric e Quilt via código de compartilhamento direto do CurseForge, com modal automático para trocar link caso expire
 - 🛡️ **Verificação de Integridade** — confere todos os JARs e modpacks para evitar arquivos truncados
 - 🧭 **Assistente Inicial de Configuração** — testa memória RAM recomendada, Java e baixa os componentes necessários
 - 📰 **Novidades do Incompletos Gaming** — notas de atualização do GitHub e servidor de Discord integrados

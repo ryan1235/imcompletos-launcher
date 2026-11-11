@@ -1,10 +1,9 @@
 {
   "name": "Incompletos",
-  "modpackName": "ModPack de Cria",
-  "mcVersion": "1.20.1",
-  "forgeVersion": "47.4.10",
-  "curseShareCode": "XM07_s-3",
-  "curseShareUrl": "https://www.curseforge.com/minecraft/share/XM07_s-3",
+  "modpackName": "ModPack de Cria 2.2",
+  "mcVersion": "1.21.1",
+  "curseShareCode": "XlQhp-nD",
+  "curseShareUrl": "https://www.curseforge.com/minecraft/share/XlQhp-nD",
   "github": {
     "owner": "ryan1235",
     "repo": "imcompletos-launcher"
@@ -21,11 +20,11 @@
   "links": {
     "Discord": "https://discord.gg/PxfytFvuhx",
     "Website": "https://incompletos.com.br",
-    "CurseForge": "https://www.curseforge.com/minecraft/share/XM07_s-3"
+    "CurseForge": "https://www.curseforge.com/minecraft/share/XlQhp-nD"
   },
   "news": {
     "welcome": "Seja bem-vindo ao Incompletos Launcher! Entre no nosso Discord para participar de eventos, salas de voz e conferir as novidades.",
     "title": "Incompletos Gaming",
-    "text": "Servidor oficial de Discord, comunidade ativa e o modpack oficial ModPack de Cria 1.4."
+    "text": "Servidor oficial de Discord, comunidade ativa e o modpack oficial ModPack de Cria 2.2."
   }
 }

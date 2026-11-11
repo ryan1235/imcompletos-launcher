@@ -307,44 +307,27 @@ function isZipValid(filePath) {
   }
 }
 
-// ---------- Forge Installer ----------
-async function ensureForge(mcVer, forgeVer, javawPath) {
-  const versionId = `${mcVer}-forge-${forgeVer}`;
+// ---------- NeoForge Installer ----------
+async function ensureNeoForge(mcVer, neoVer, javawPath) {
+  const versionId = `neoforge-${neoVer}`;
   const versionJson = path.join(gameDir, 'versions', versionId, `${versionId}.json`);
-  const clientLibDir = path.join(gameDir, 'libraries', 'net', 'minecraft', 'client', `${mcVer}-20230612.114412`);
-  const slimJar = path.join(clientLibDir, `client-${mcVer}-20230612.114412-slim.jar`);
-  const extraJar = path.join(clientLibDir, `client-${mcVer}-20230612.114412-extra.jar`);
-  const srgJar = path.join(clientLibDir, `client-${mcVer}-20230612.114412-srg.jar`);
+  const neoLibDir = path.join(gameDir, 'libraries', 'net', 'neoforged', 'neoforge', neoVer);
 
-  const forgeLibDir = path.join(gameDir, 'libraries', 'net', 'minecraftforge', 'forge', `${mcVer}-${forgeVer}`);
-  const forgeClientJar = path.join(forgeLibDir, `forge-${mcVer}-${forgeVer}-client.jar`);
-  const forgeUniversalJar = path.join(forgeLibDir, `forge-${mcVer}-${forgeVer}-universal.jar`);
-
-  const essentialJars = [slimJar, extraJar, srgJar, forgeClientJar, forgeUniversalJar];
-
-  // Se a instalação e todos os JARs essenciais estão íntegros, não precisa reinstalar
-  if (fs.existsSync(versionJson) && essentialJars.every((j) => isZipValid(j))) {
+  if (fs.existsSync(versionJson) && fs.existsSync(neoLibDir)) {
+    const customJar = path.join(gameDir, 'versions', versionId, `${versionId}.jar`);
+    const vanillaJar = path.join(gameDir, 'versions', mcVer, `${mcVer}.jar`);
+    if (!fs.existsSync(customJar) && fs.existsSync(vanillaJar)) {
+      try { fs.copyFileSync(vanillaJar, customJar); } catch {}
+    }
     return versionId;
   }
 
-  // Se algum JAR estiver quebrado ou incompleto, limpa para reinstalar do zero
-  for (const j of essentialJars) {
-    if (fs.existsSync(j) && !isZipValid(j)) {
-      try { fs.rmSync(j, { force: true }); } catch {}
-    }
-  }
-  if (fs.existsSync(versionJson)) {
-    try { fs.rmSync(versionJson, { force: true }); } catch {}
-  }
-  try { fs.rmSync(path.join(clientLibDir, `client-${mcVer}-20230612.114412-extra.jar.cache`), { force: true }); } catch {}
-  try { fs.rmSync(path.join(clientLibDir, `client-${mcVer}-20230612.114412-slim.jar.cache`), { force: true }); } catch {}
+  status(`Baixando instalador do NeoForge ${neoVer}...`, 0);
+  const installerJar = path.join(userData, `neoforge-${neoVer}-installer.jar`);
+  const url = `https://maven.neoforged.net/releases/net/neoforged/neoforge/${neoVer}/neoforge-${neoVer}-installer.jar`;
+  await download(url, installerJar, (p, d, t) => status(`Baixando NeoForge ${neoVer} — ${MB(d)} / ${MB(t)} MB`, p * 100));
 
-  status(`Baixando instalador do Forge ${forgeVer}...`, 0);
-  const installerJar = path.join(userData, `forge-${mcVer}-${forgeVer}-installer.jar`);
-  const url = `https://maven.minecraftforge.net/net/minecraftforge/forge/${mcVer}-${forgeVer}/forge-${mcVer}-${forgeVer}-installer.jar`;
-  await download(url, installerJar, (p, d, t) => status(`Baixando Forge ${forgeVer} — ${MB(d)} / ${MB(t)} MB`, p * 100));
-
-  status(`Instalando Forge ${forgeVer} (primeira vez, aguarde)...`, 50);
+  status(`Instalando NeoForge ${neoVer} (aguarde)...`, 50);
   const profilesPath = path.join(gameDir, 'launcher_profiles.json');
   if (!fs.existsSync(profilesPath)) {
     fs.mkdirSync(gameDir, { recursive: true });
@@ -362,15 +345,146 @@ async function ensureForge(mcVer, forgeVer, javawPath) {
 
   try { fs.rmSync(installerJar, { force: true }); } catch {}
 
-  const postInstallValid = fs.existsSync(versionJson) && essentialJars.every((j) => isZipValid(j));
-  if (!postInstallValid) {
-    try { fs.rmSync(versionJson, { force: true }); } catch {}
+  if (!fs.existsSync(versionJson)) {
     const out = (r.stderr || '') + (r.stdout || '');
-    throw new Error('Falha ao instalar o Forge: ' + (out.slice(-400) || 'Arquivos de versão ou bibliotecas corrompidos'));
+    throw new Error('Falha ao instalar o NeoForge: ' + (out.slice(-400) || 'Arquivo de versão não gerado'));
   }
 
-  status(`Forge ${forgeVer} instalado com sucesso!`, 100);
+  const customJar = path.join(gameDir, 'versions', versionId, `${versionId}.jar`);
+  const vanillaJar = path.join(gameDir, 'versions', mcVer, `${mcVer}.jar`);
+  if (!fs.existsSync(customJar) && fs.existsSync(vanillaJar)) {
+    try { fs.copyFileSync(vanillaJar, customJar); } catch {}
+  }
+
+  status(`NeoForge ${neoVer} instalado com sucesso!`, 100);
   return versionId;
+}
+
+// ---------- Fabric Installer ----------
+async function ensureFabric(mcVer, fabricVer) {
+  const cleanVer = String(fabricVer || '').replace(/^fabric-/i, '');
+  const versionId = `fabric-loader-${cleanVer}-${mcVer}`;
+  const versionDir = path.join(gameDir, 'versions', versionId);
+  const versionJson = path.join(versionDir, `${versionId}.json`);
+
+  if (fs.existsSync(versionJson)) return versionId;
+
+  status(`Configurando Fabric Loader ${cleanVer}...`, 50);
+  fs.mkdirSync(versionDir, { recursive: true });
+  const url = `https://meta.fabricmc.net/v2/versions/loader/${mcVer}/${cleanVer}/profile/json`;
+  const profile = await getJson(url);
+  fs.writeFileSync(versionJson, JSON.stringify(profile, null, 2));
+
+  const customJar = path.join(versionDir, `${versionId}.jar`);
+  const vanillaJar = path.join(gameDir, 'versions', mcVer, `${mcVer}.jar`);
+  if (!fs.existsSync(customJar) && fs.existsSync(vanillaJar)) {
+    try { fs.copyFileSync(vanillaJar, customJar); } catch {}
+  }
+
+  status(`Fabric Loader ${cleanVer} pronto!`, 100);
+  return versionId;
+}
+
+// ---------- Quilt Installer ----------
+async function ensureQuilt(mcVer, quiltVer) {
+  const cleanVer = String(quiltVer || '').replace(/^quilt-/i, '');
+  const versionId = `quilt-loader-${cleanVer}-${mcVer}`;
+  const versionDir = path.join(gameDir, 'versions', versionId);
+  const versionJson = path.join(versionDir, `${versionId}.json`);
+
+  if (fs.existsSync(versionJson)) return versionId;
+
+  status(`Configurando Quilt Loader ${cleanVer}...`, 50);
+  fs.mkdirSync(versionDir, { recursive: true });
+  const url = `https://meta.quiltmc.org/v3/versions/loader/${mcVer}/${cleanVer}/profile/json`;
+  const profile = await getJson(url);
+  fs.writeFileSync(versionJson, JSON.stringify(profile, null, 2));
+
+  const customJar = path.join(versionDir, `${versionId}.jar`);
+  const vanillaJar = path.join(gameDir, 'versions', mcVer, `${mcVer}.jar`);
+  if (!fs.existsSync(customJar) && fs.existsSync(vanillaJar)) {
+    try { fs.copyFileSync(vanillaJar, customJar); } catch {}
+  }
+
+  status(`Quilt Loader ${cleanVer} pronto!`, 100);
+  return versionId;
+}
+
+// ---------- Forge Installer ----------
+async function ensureForge(mcVer, forgeVer, javawPath) {
+  let cleanForgeVer = String(forgeVer || '').replace(/^forge-/i, '');
+  if (cleanForgeVer.startsWith(mcVer + '-')) cleanForgeVer = cleanForgeVer.slice(mcVer.length + 1);
+  const versionId = `${mcVer}-forge-${cleanForgeVer}`;
+  const versionJson = path.join(gameDir, 'versions', versionId, `${versionId}.json`);
+  const forgeLibDir = path.join(gameDir, 'libraries', 'net', 'minecraftforge', 'forge', `${mcVer}-${cleanForgeVer}`);
+
+  if (fs.existsSync(versionJson) && fs.existsSync(forgeLibDir)) {
+    return versionId;
+  }
+
+  status(`Baixando instalador do Forge ${cleanForgeVer}...`, 0);
+  const installerJar = path.join(userData, `forge-${mcVer}-${cleanForgeVer}-installer.jar`);
+  const url = `https://maven.minecraftforge.net/net/minecraftforge/forge/${mcVer}-${cleanForgeVer}/forge-${mcVer}-${cleanForgeVer}-installer.jar`;
+  await download(url, installerJar, (p, d, t) => status(`Baixando Forge ${cleanForgeVer} — ${MB(d)} / ${MB(t)} MB`, p * 100));
+
+  status(`Instalando Forge ${cleanForgeVer} (aguarde)...`, 50);
+  const profilesPath = path.join(gameDir, 'launcher_profiles.json');
+  if (!fs.existsSync(profilesPath)) {
+    fs.mkdirSync(gameDir, { recursive: true });
+    fs.writeFileSync(profilesPath, JSON.stringify({ profiles: {} }));
+  }
+
+  const javaExe = path.join(path.dirname(javawPath), 'java.exe');
+  const bin = fs.existsSync(javaExe) ? javaExe : javawPath;
+  const r = spawnSync(bin, ['-jar', installerJar, '--installClient', gameDir], {
+    encoding: 'utf8',
+    windowsHide: true,
+    maxBuffer: 50 * 1024 * 1024,
+    timeout: 600000
+  });
+
+  try { fs.rmSync(installerJar, { force: true }); } catch {}
+
+  if (!fs.existsSync(versionJson)) {
+    const out = (r.stderr || '') + (r.stdout || '');
+    throw new Error('Falha ao instalar o Forge: ' + (out.slice(-400) || 'Arquivo de versão ou bibliotecas não gerados'));
+  }
+
+  status(`Forge ${cleanForgeVer} instalado com sucesso!`, 100);
+  return versionId;
+}
+
+// ---------- ModLoader Dispatcher ----------
+async function ensureModLoader(mcVer, mf, javawPath) {
+  const loaders = (mf && mf.minecraft && mf.minecraft.modLoaders) || [];
+  const primary = loaders.find((l) => l.primary) || loaders[0];
+  const loaderId = primary ? String(primary.id || '').trim() : '';
+
+  if (loaderId.toLowerCase().startsWith('neoforge')) {
+    const neoVer = loaderId.replace(/^neoforge-/i, '');
+    return await ensureNeoForge(mcVer, neoVer, javawPath);
+  }
+  if (loaderId.toLowerCase().startsWith('fabric')) {
+    const fabVer = loaderId.replace(/^fabric-/i, '');
+    return await ensureFabric(mcVer, fabVer);
+  }
+  if (loaderId.toLowerCase().startsWith('quilt')) {
+    const qVer = loaderId.replace(/^quilt-/i, '');
+    return await ensureQuilt(mcVer, qVer);
+  }
+  if (loaderId.toLowerCase().startsWith('forge')) {
+    let fVer = loaderId.replace(/^forge-/i, '');
+    if (fVer.startsWith(mcVer + '-')) fVer = fVer.slice(mcVer.length + 1);
+    return await ensureForge(mcVer, fVer, javawPath);
+  }
+
+  if (config.forgeVersion) {
+    let fVer = String(config.forgeVersion).replace(/^forge-/i, '');
+    if (fVer.startsWith(mcVer + '-')) fVer = fVer.slice(mcVer.length + 1);
+    return await ensureForge(mcVer, fVer, javawPath);
+  }
+
+  return null;
 }
 
 // ---------- CurseForge Modpack Sync ----------
@@ -389,7 +503,11 @@ function extractCurseCode(str) {
 }
 function getCurseShareCode() {
   const s = loadSettings();
-  return s.curseShareCode || config.curseShareCode || 'XM07_s-3';
+  if (s.curseShareCode === 'XM07_s-3' || s.curseShareCode === '9CP-ToPO') {
+    delete s.curseShareCode;
+    saveSettings(s);
+  }
+  return s.curseShareCode || config.curseShareCode || 'XlQhp-nD';
 }
 
 function getForgeCdnUrl(fileId, fileName) {
@@ -442,16 +560,28 @@ async function syncCurseModpack(shareCode) {
   const files = curseManifest.files || [];
   if (!files.length) return;
 
-  // 2. Consultar informações completas dos arquivos via curse.tools
+  // 2. Consultar informações completas dos arquivos via curse.tools (em lotes)
   status('Verificando lista de mods e arquivos...', 20);
   const fileIds = files.map((f) => f.fileID);
   const modIds = [...new Set(files.map((f) => f.projectID))];
 
-  const filesRes = await postJson('https://api.curse.tools/v1/mods/files', { fileIds });
-  const modsRes = await postJson('https://api.curse.tools/v1/mods', { modIds });
+  const filesData = [];
+  const chunkSize = 80;
+  for (let k = 0; k < fileIds.length; k += chunkSize) {
+    const chunk = fileIds.slice(k, k + chunkSize);
+    const res = await postJson('https://api.curse.tools/v1/mods/files', { fileIds: chunk });
+    if (res.data) filesData.push(...res.data);
+  }
+
+  const modsData = [];
+  for (let k = 0; k < modIds.length; k += chunkSize) {
+    const chunk = modIds.slice(k, k + chunkSize);
+    const res = await postJson('https://api.curse.tools/v1/mods', { modIds: chunk });
+    if (res.data) modsData.push(...res.data);
+  }
 
   const categoryMap = new Map();
-  for (const m of (modsRes.data || [])) {
+  for (const m of modsData) {
     if (m.classId === 6552) categoryMap.set(m.id, 'shaderpacks');
     else if (m.classId === 12) categoryMap.set(m.id, 'resourcepacks');
     else categoryMap.set(m.id, 'mods');
@@ -459,7 +589,7 @@ async function syncCurseModpack(shareCode) {
 
   // Limpeza de mods obsoletos
   const validModNames = new Set(
-    (filesRes.data || [])
+    filesData
       .filter((f) => (categoryMap.get(f.modId) || (f.fileName.endsWith('.jar') ? 'mods' : 'other')) === 'mods')
       .map((f) => f.fileName.toLowerCase())
   );
@@ -473,7 +603,7 @@ async function syncCurseModpack(shareCode) {
   }
 
   // 3. Baixar arquivos que faltam ou estão corrompidos
-  const toDownload = filesRes.data || [];
+  const toDownload = filesData;
   let i = 0;
   for (const f of toDownload) {
     i++;
@@ -505,7 +635,11 @@ async function syncCurseModpack(shareCode) {
     await download(dlUrl, dest);
   }
 
-  saveSettings({ ...loadSettings(), packVersion: curseManifest.name || 'curse-pack' });
+  saveSettings({
+    ...loadSettings(),
+    packVersion: curseManifest.name || 'curse-pack',
+    packMcVersion: (curseManifest.minecraft && curseManifest.minecraft.version) || mcVersion()
+  });
 }
 
 // ---------- Modpack tradicional (GitHub) ----------
@@ -686,10 +820,18 @@ async function microsoftSession() {
 // ---------- IPC ----------
 ipcMain.handle('init', () => {
   const settings = loadSettings();
-  const curseCode = settings.curseShareCode || config.curseShareCode || 'XM07_s-3';
+  const curseCode = getCurseShareCode();
+  let activeManifest = curseManifest;
+  if (!activeManifest && fs.existsSync(curseManifestCache)) {
+    try { activeManifest = JSON.parse(fs.readFileSync(curseManifestCache, 'utf8')); } catch {}
+  }
+  const currentMc = (activeManifest && activeManifest.minecraft && activeManifest.minecraft.version) || config.mcVersion || '1.21.1';
+  const currentName = (activeManifest && activeManifest.name) || config.modpackName || config.name;
   return {
     config: {
       ...config,
+      mcVersion: currentMc,
+      modpackName: currentName,
       curseShareCode: curseCode,
       curseShareUrl: `https://www.curseforge.com/minecraft/share/${curseCode}`
     },
@@ -700,6 +842,7 @@ ipcMain.handle('init', () => {
 ipcMain.handle('set-curse-code', async (_, raw) => {
   const code = extractCurseCode(raw);
   if (!code) return { ok: false, error: 'Código ou link inválido do CurseForge.' };
+  let manifestData = null;
   try {
     status('Verificando código no CurseForge...', 0);
     const testZip = path.join(userData, 'curse-test.zip');
@@ -708,17 +851,37 @@ ipcMain.handle('set-curse-code', async (_, raw) => {
     fs.rmSync(testDir, { recursive: true, force: true });
     fs.mkdirSync(testDir, { recursive: true });
     await extract(testZip, { dir: testDir });
-    const hasManifest = fs.existsSync(path.join(testDir, 'manifest.json'));
+    const mfPath = path.join(testDir, 'manifest.json');
+    if (!fs.existsSync(mfPath)) {
+      fs.rmSync(testDir, { recursive: true, force: true });
+      fs.rmSync(testZip, { force: true });
+      return { ok: false, error: 'O pacote baixado não contém manifest.json de modpack.' };
+    }
+    manifestData = JSON.parse(fs.readFileSync(mfPath, 'utf8'));
+    curseManifest = manifestData;
+    manifest = curseManifest;
+    fs.writeFileSync(curseManifestCache, JSON.stringify(curseManifest, null, 2));
     fs.rmSync(testDir, { recursive: true, force: true });
     fs.rmSync(testZip, { force: true });
-    if (!hasManifest) return { ok: false, error: 'O pacote baixado não contém manifest.json de modpack.' };
   } catch (err) {
     return { ok: false, error: 'Código não encontrado ou já expirado no CurseForge.' };
   }
   config.curseShareCode = code;
   config.curseShareUrl = `https://www.curseforge.com/minecraft/share/${code}`;
-  saveSettings({ ...loadSettings(), curseShareCode: code, packVersion: null });
-  return { ok: true, code, url: config.curseShareUrl };
+  saveSettings({
+    ...loadSettings(),
+    curseShareCode: code,
+    packVersion: manifestData?.name || null,
+    packMcVersion: manifestData?.minecraft?.version || null
+  });
+  return {
+    ok: true,
+    code,
+    url: config.curseShareUrl,
+    name: manifestData?.name,
+    mcVersion: manifestData?.minecraft?.version,
+    modLoader: (manifestData?.minecraft?.modLoaders || [])[0]?.id
+  };
 });
 ipcMain.handle('ms-login', async () => { try { return { ok: true, name: await microsoftLogin() }; } catch (e) { return { ok: false, error: e.message, cancelled: !!e.cancelled }; } });
 ipcMain.handle('ms-logout', () => { const s = loadSettings(); delete s.ms; saveSettings(s); msAuth = null; msAuthAt = 0; return true; });
@@ -735,14 +898,18 @@ ipcMain.handle('pick-java', async () => {
 ipcMain.handle('repair', () => {
   try {
     fs.rmSync(path.join(gameDir, '.seeded'), { force: true });
-    const mcVer = mcVersion();
-    const forgeVer = config.forgeVersion;
-    if (forgeVer) {
-      const versionId = `${mcVer}-forge-${forgeVer}`;
-      fs.rmSync(path.join(gameDir, 'versions', versionId), { recursive: true, force: true });
-      fs.rmSync(path.join(gameDir, 'libraries', 'net', 'minecraft', 'client'), { recursive: true, force: true });
-      fs.rmSync(path.join(gameDir, 'libraries', 'net', 'minecraftforge', 'forge', `${mcVer}-${forgeVer}`), { recursive: true, force: true });
+    const versionsDir = path.join(gameDir, 'versions');
+    if (fs.existsSync(versionsDir)) {
+      for (const v of fs.readdirSync(versionsDir)) {
+        if (/forge|fabric|quilt/i.test(v)) {
+          try { fs.rmSync(path.join(versionsDir, v), { recursive: true, force: true }); } catch {}
+        }
+      }
     }
+    try { fs.rmSync(path.join(gameDir, 'libraries', 'net', 'minecraftforge'), { recursive: true, force: true }); } catch {}
+    try { fs.rmSync(path.join(gameDir, 'libraries', 'net', 'neoforged'), { recursive: true, force: true }); } catch {}
+    try { fs.rmSync(path.join(gameDir, 'libraries', 'net', 'fabricmc'), { recursive: true, force: true }); } catch {}
+
     const modsFolder = path.join(gameDir, 'mods');
     if (fs.existsSync(modsFolder)) {
       for (const f of fs.readdirSync(modsFolder)) {
@@ -809,7 +976,7 @@ ipcMain.handle('releases', async () => {
   }
 });
 
-// primeiro download: Java + modpack + Forge
+// primeiro download: Java + modpack + modloader
 ipcMain.handle('prepare', async () => {
   if (launching) return { ok: false, error: 'Aguarde...' };
   launching = true;
@@ -822,10 +989,7 @@ ipcMain.handle('prepare', async () => {
     const mcVer = mcVersion();
     const javaPath = await ensureJava(mcVer);
 
-    const forgeVer = config.forgeVersion || ((manifest && manifest.minecraft && manifest.minecraft.modLoaders) ? manifest.minecraft.modLoaders[0].id.replace(/^forge-/, '') : null);
-    if (forgeVer) {
-      await ensureForge(mcVer, forgeVer, javaPath);
-    }
+    await ensureModLoader(mcVer, manifest, javaPath);
 
     status('Tudo pronto!', 100);
     return { ok: true };
@@ -858,11 +1022,8 @@ ipcMain.handle('play', async (_, { mode, nick }) => {
     const mcVer = mcVersion();
     const javaPath = await ensureJava(mcVer);
 
-    let customVersion = null;
-    const forgeVer = config.forgeVersion || ((manifest && manifest.minecraft && manifest.minecraft.modLoaders) ? manifest.minecraft.modLoaders[0].id.replace(/^forge-/, '') : null);
-    if (forgeVer) {
-      customVersion = await ensureForge(mcVer, forgeVer, javaPath);
-    } else if (manifest && manifest.customVersion) {
+    let customVersion = await ensureModLoader(mcVer, manifest, javaPath);
+    if (!customVersion && manifest && manifest.customVersion) {
       customVersion = manifest.customVersion;
     }
 
@@ -884,7 +1045,7 @@ ipcMain.handle('play', async (_, { mode, nick }) => {
       showWindow();
     });
 
-    const forgeJvmArgs = [];
+    const extraJvmArgs = [];
     if (customVersion) {
       const vJsonPath = path.join(gameDir, 'versions', customVersion, `${customVersion}.json`);
       if (fs.existsSync(vJsonPath)) {
@@ -894,16 +1055,21 @@ ipcMain.handle('play', async (_, { mode, nick }) => {
           const cpSep = ';';
           const jvmRaw = (vJson.arguments && vJson.arguments.jvm) || [];
           for (const arg of jvmRaw) {
-            if (typeof arg === 'string') {
-              forgeJvmArgs.push(arg
-                .replace(/\$\{library_directory\}/g, libDir)
-                .replace(/\$\{classpath_separator\}/g, cpSep)
-                .replace(/\$\{version_name\}/g, customVersion)
-              );
+            let values = [];
+            if (typeof arg === 'string') values = [arg];
+            else if (arg && arg.value) values = Array.isArray(arg.value) ? arg.value : [arg.value];
+            for (const val of values) {
+              if (typeof val === 'string') {
+                extraJvmArgs.push(val
+                  .replace(/\$\{library_directory\}/g, libDir)
+                  .replace(/\$\{classpath_separator\}/g, cpSep)
+                  .replace(/\$\{version_name\}/g, customVersion)
+                );
+              }
             }
           }
         } catch (e) {
-          console.error('Erro ao ler JVM args do Forge:', e);
+          console.error('Erro ao ler JVM args da versão customizada:', e);
         }
       }
     }
@@ -911,7 +1077,7 @@ ipcMain.handle('play', async (_, { mode, nick }) => {
     const opts = {
       authorization, root: gameDir, javaPath, version,
       memory: { min: config.ram.min, max: ramMbFor() + 'M' },
-      customArgs: forgeJvmArgs
+      customArgs: extraJvmArgs
     };
     if (st.fullscreen) opts.window = { fullscreen: true };
     else if (st.width && st.height) opts.window = { width: String(st.width), height: String(st.height) };

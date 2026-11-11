@@ -172,6 +172,8 @@ function promptCurseModal(defaultCode, onResolved, isExpired = false) {
       S.curseShareCode = res.code;
       S.curseShareUrl = res.url;
       if ($('curseCodeInp')) $('curseCodeInp').value = res.url;
+      if (res.name) $('packSub').textContent = res.name;
+      if (res.mcVersion) $('vMc').textContent = res.mcVersion;
       modal.classList.add('hidden');
       toast(`Modpack atualizado! (${res.code})`);
       if (typeof onResolved === 'function') onResolved(res);
@@ -519,7 +521,7 @@ async function wizRender() {
     const inp = $('wCUrl');
     const msg = $('wCMsg');
     const testBtn = $('wCTestBtn');
-    inp.value = S.curseShareUrl || (S.curseShareCode ? `https://www.curseforge.com/minecraft/share/${S.curseShareCode}` : 'https://www.curseforge.com/minecraft/share/XM07_s-3');
+    inp.value = S.curseShareUrl || (S.curseShareCode ? `https://www.curseforge.com/minecraft/share/${S.curseShareCode}` : 'https://www.curseforge.com/minecraft/share/XlQhp-nD');
 
     testBtn.onclick = async () => {
       const v = inp.value.trim();
@@ -683,6 +685,7 @@ async function wizFinish() {
   SYS = await api.sys();
   S.cfgName = config.name;
   S.cfgNews = config.news;
+  if (S.curseShareCode === 'XM07_s-3' || S.curseShareCode === '9CP-ToPO') delete S.curseShareCode;
   S.curseShareCode = S.curseShareCode || config.curseShareCode;
   S.curseShareUrl = config.curseShareUrl || (S.curseShareCode ? `https://www.curseforge.com/minecraft/share/${S.curseShareCode}` : '');
   $('packName').textContent = config.name;

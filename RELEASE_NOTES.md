@@ -1,12 +1,17 @@
-## 🚀 Incompletos Launcher v1.0.1 — Novo Servidor & Correções de Inicialização
+## 🚀 Incompletos Launcher v1.1.0 — Novo ModPack de Cria 2.2 & NeoForge (Minecraft 1.21.1)
 
-### 🌐 Conexão & Servidor Oficial
-- **Novo IP do servidor**: Conexão configurada para `enx-cirion-56.enx.host:10078` com status e ping em tempo real no launcher.
+### 📦 Atualização para o ModPack de Cria 2.2
+- **Novo Modpack Oficial**: Atualizado para a versão **2.2** no Minecraft **1.21.1** com código de compartilhamento CurseForge integrado (`XlQhp-nD`).
+- **Suporte Nativo a NeoForge**: Adicionado suporte automático de instalação e execução para modpacks baseados em **NeoForge** (incluindo NeoForge 21.1.265).
+- **Suporte a Múltiplos ModLoaders**: O launcher agora detecta e instala dinamicamente **NeoForge**, **Forge**, **Fabric** e **Quilt** diretamente a partir do manifesto do CurseForge.
 
-### 🛡️ Correção do Erro `zip END header not found` (Forge / Modpack)
-- **Validação de JARs do Forge**: Agora o launcher valida todos os arquivos essenciais (`client-slim.jar`, `client-extra.jar`, `client-srg.jar`, `forge-client.jar` e `forge-universal.jar`). Se algum arquivo tiver sido interrompido ou corrompido, o launcher detecta sozinho e refaz a instalação limpa do Forge automaticamente.
-- **Validação preventiva de mods**: Arquivos corrompidos ou com tamanho zero na pasta `mods` são detectados e rebaixados automaticamente.
-- **Botão de Reparo Aprimorado**: A ferramenta "Reparar" nas configurações agora limpa versões e bibliotecas com problemas, permitindo ao jogador corrigir o jogo com apenas 1 clique.
+### ☕ Java 21 Automático
+- **Adoptium Temurin JRE 21**: Suporte completo a Java 21, necessário para o Minecraft 1.21+. O launcher embutiu o JRE 21 e gerencia downloads automáticos caso necessário.
+
+### ⚡ Melhorias de Desempenho & Rede
+- **Download em Lotes no CurseForge**: Consulta de mods otimizada em lotes para acelerar a verificação e evitar problemas de conexão com listas grandes de mods.
+- **Interface Dinâmica**: O launcher exibe automaticamente o nome e a versão do Minecraft de acordo com o modpack ativo.
+- **Ferramenta de Reparo Atualizada**: Permite reinstalar e limpar versões e bibliotecas corrompidas de qualquer modloader com um único clique.
 
 ### ⬆️ Como atualizar
 Quem já possui o Incompletos Launcher instalado receberá a atualização automaticamente ao abrir. Usuários novos podem baixar o instalador (`Setup`) ou a versão portátil (`Portable`) abaixo.
